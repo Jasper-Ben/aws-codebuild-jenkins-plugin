@@ -19,6 +19,7 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.CreateMultipartUploadRequest;
 import hudson.FilePath;
 import hudson.model.TaskListener;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +51,8 @@ public class S3DataManager {
 
         FilePath localFile;
         String zipFileMD5;
+        long contentLength;
+        long partSize = 5 * 1024 * 1024; // Set part size to 5MB.  
         ObjectMetadata objectMetadata = new ObjectMetadata();
 
         if(localSourcePath != null && !localSourcePath.isEmpty()) {
@@ -68,6 +71,13 @@ public class S3DataManager {
             localFile = new FilePath(workspace, getTempFilePath(sourcePath));
             zipFileMD5 = localFile.act(new ZipSourceCallable(workspace));
         }
+
+        contentLength = localFile.length();
+
+        CreateMultipartUploadRequest createMultipartUploadRequest = CreateMultipartUploadRequest.builder()
+        .bucket(s3InputBucket)
+        .key(s3InputKey)
+        .build();
 
         // Add MD5 checksum as S3 Object metadata
         objectMetadata.setContentMD5(zipFileMD5);
